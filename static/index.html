@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pitch Editor</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f0f13;
+      color: #e2e2e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 18px 32px;
+      border-bottom: 1px solid #1e1e2a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #c8b8ff;
+    }
+
+    .main {
+      width: 100%;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #2e2e42;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #7c6aff;
+      background: #16162088;
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-zone .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .upload-zone p { color: #888; font-size: 0.9rem; }
+    .upload-zone strong { color: #c8b8ff; }
+
+    /* File info bar */
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: #16162088;
+      border: 1px solid #1e1e2a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+    }
+
+    .file-info.visible { display: flex; }
+    .file-info .name { color: #c8b8ff; font-weight: 500; flex: 1; }
+    .file-info .meta { color: #666; }
+
+    /* Analyze button */
+    .btn-analyze {
+      padding: 10px 28px;
+      background: #7c6aff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: none;
+    }
+
+    .btn-analyze.visible { display: inline-flex; align-items: center; gap: 8px; }
+    .btn-analyze:hover { background: #9180ff; }
+    .btn-analyze:active { transform: scale(0.97); }
+    .btn-analyze:disabled { background: #44445a; cursor: not-allowed; }
+
+    /* Progress */
+    .progress-bar {
+      display: none;
+      height: 4px;
+      background: #1e1e2a;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar.visible { display: block; }
+    .progress-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c6aff, #bf9fff);
+      animation: progress-anim 1.6s ease-in-out infinite;
+      width: 40%;
+    }
+    @keyframes progress-anim {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* Plots */
+    .plots {
+      display: none;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid #1e1e2a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .plots.visible { display: flex; }
+
+    .plot-panel {
+      background: #13131a;
+      position: relative;
+      width: 100%;
+    }
+
+    .plot-panel > div { width: 100%; }
+
+    .plot-panel + .plot-panel {
+      border-top: 1px solid #1e1e2a;
+    }
+
+    .panel-label {
+      position: absolute;
+      top: 10px;
+      left: 16px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #555;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Playback controls */
+    .controls {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+    }
+    .controls.visible { display: flex; }
+
+    .btn-play {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #7c6aff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-play:hover { background: #9180ff; }
+
+    .time-display {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: #888;
+      width: 100px;
+    }
+
+    .volume-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .volume-wrap input[type=range] {
+      accent-color: #7c6aff;
+      width: 80px;
+    }
+
+    .btn-toggle {
+      padding: 6px 14px;
+      background: transparent;
+      color: #ffaa44;
+      border: 1px solid #ffaa4466;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-toggle:hover { background: #ffaa4418; border-color: #ffaa44aa; }
+    .btn-toggle.off { color: #555; border-color: #333; }
+    .btn-toggle.off:hover { background: #ffffff08; border-color: #555; }
+
+    .btn-export {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #1e4a3a;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #44ccaa;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-export:hover { background: #2a6651; }
+    .btn-export:disabled { background: #1a1a1a; color: #444; cursor: default; }
+    .btn-export:disabled:hover { background: #1a1a1a; }
+
+    .error-msg {
+      display: none;
+      background: #2a1515;
+      border: 1px solid #5a2020;
+      color: #ff8888;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8b8ff" stroke-width="2" stroke-linecap="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+  <h1>Pitch Editor</h1>
+</header>
+
+<div class="main">
+
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept="audio/*" />
+    <div class="icon">🎵</div>
+    <p><strong>Drop an audio file</strong> or click to browse</p>
+    <p>WAV · MP3 · FLAC · OGG · M4A</p>
+  </div>
+
+  <div class="file-info" id="fileInfo">
+    <span class="name" id="fileName"></span>
+    <span class="meta" id="fileMeta"></span>
+    <button class="btn-analyze visible" id="analyzeBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Analyze
+    </button>
+  </div>
+
+  <div class="progress-bar" id="progressBar"><div class="fill"></div></div>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="plots" id="plots">
+    <div class="plot-panel">
+      <div class="panel-label">Waveform</div>
+      <div id="waveformPlot"></div>
+    </div>
+    <div class="plot-panel">
+      <div class="panel-label">F0 Contour</div>
+      <div id="f0Plot"></div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="btn-play" id="playBtn" title="Play / Pause">
+      <svg id="playIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <svg id="pauseIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    </button>
+    <button class="btn-export" id="exportBtn" title="Save current audio as WAV">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
+    <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+    <button class="btn-toggle" id="notesToggle">Notes</button>
+    <div class="volume-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" />
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let audioCtx = null;
+let audioBuffer = null;
+let sourceNode = null;
+let gainNode = null;
+let isPlaying = false;
+let startTime = 0;
+let pauseOffset = 0;
+let duration = 0;
+let animFrame = null;
+let analysisData = null;
+let cursorTime = 0;
+let noteShapesF0   = [];
+let noteShapesWave = [];
+let showNotes = true;
+let syncing = false;
+let sessionId = null;
+// drag state
+let dragIdx       = -1;
+let dragStartMidi = 0;
+let dragSnapMidi  = 0;
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const fileInput     = document.getElementById('fileInput');
+const uploadZone    = document.getElementById('uploadZone');
+const fileInfo      = document.getElementById('fileInfo');
+const fileName      = document.getElementById('fileName');
+const fileMeta      = document.getElementById('fileMeta');
+const analyzeBtn    = document.getElementById('analyzeBtn');
+const progressBar   = document.getElementById('progressBar');
+const errorMsg      = document.getElementById('errorMsg');
+const plots         = document.getElementById('plots');
+const controls      = document.getElementById('controls');
+const playBtn       = document.getElementById('playBtn');
+const playIcon      = document.getElementById('playIcon');
+const pauseIcon     = document.getElementById('pauseIcon');
+const timeDisplay   = document.getElementById('timeDisplay');
+const volumeSlider  = document.getElementById('volumeSlider');
+const notesToggle   = document.getElementById('notesToggle');
+const exportBtn     = document.getElementById('exportBtn');
+
+// ── Upload handling ───────────────────────────────────────────────────────────
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(f) {
+  fileName.textContent = f.name;
+  fileMeta.textContent = (f.size / 1e6).toFixed(2) + ' MB';
+  fileInfo.classList.add('visible');
+  errorMsg.classList.remove('visible');
+  plots.classList.remove('visible');
+  controls.classList.remove('visible');
+  stopAudio();
+  analyzeBtn.disabled = false;
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    if (!audioCtx) audioCtx = new AudioContext();
+    try { audioBuffer = await audioCtx.decodeAudioData(e.target.result); duration = audioBuffer.duration; }
+    catch(err) { console.warn('Audio decode failed:', err); }
+  };
+  reader.readAsArrayBuffer(f);
+  window._currentFile = f;
+}
+
+analyzeBtn.addEventListener('click', () => { if (window._currentFile) runAnalysis(window._currentFile); });
+
+// ── Analysis ─────────────────────────────────────────────────────────────────
+async function runAnalysis(file) {
+  analyzeBtn.disabled = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/analyze', { method: 'POST', body: form });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || res.statusText); }
+    analysisData = await res.json();
+    sessionId = analysisData.session_id;
+    buildNoteShapes(analysisData.notes || []);
+    renderPlots(analysisData);
+    setupNoteDrag();
+    controls.classList.add('visible');
+  } catch(err) {
+    errorMsg.textContent = 'Analysis failed: ' + err.message;
+    errorMsg.classList.add('visible');
+  } finally {
+    progressBar.classList.remove('visible');
+    analyzeBtn.disabled = false;
+  }
+}
+
+// ── Pitch helpers ─────────────────────────────────────────────────────────────
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function hzToMidi(hz) { return hz ? 69 + 12 * Math.log2(hz / 440) : null; }
+function midiToName(midi) {
+  const m = Math.round(midi);
+  const cents = Math.round((midi - m) * 100);
+  const name = NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+  return cents === 0 ? name : `${name} ${cents > 0 ? '+' : ''}${cents}¢`;
+}
+
+// Tick marks at every semitone, all labelled
+const pitchTickVals = [], pitchTickText = [];
+for (let m = 24; m <= 108; m++) {
+  pitchTickVals.push(m);
+  pitchTickText.push(NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1));
+}
+
+// ── Note shapes ───────────────────────────────────────────────────────────────
+const NOTE_FILL   = 'rgba(255,170,68,0.28)';
+const NOTE_BORDER = 'rgba(255,170,68,0.9)';
+const NOTE_ONSET  = 'rgba(255,170,68,0.55)';
+
+function buildNoteShapes(notes) {
+  noteShapesF0 = notes.map(n => ({
+    type: 'rect',
+    x0: n.start, x1: n.end,
+    y0: hzToMidi(n.hz) - 0.5,   // ±half semitone in MIDI space
+    y1: hzToMidi(n.hz) + 0.5,
+    xref: 'x', yref: 'y',
+    fillcolor: NOTE_FILL,
+    line: { color: NOTE_BORDER, width: 1.5 },
+    layer: 'below',
+  }));
+
+  noteShapesWave = notes.map(n => ({
+    type: 'line',
+    x0: n.start, x1: n.start,
+    y0: 0, y1: 1, yref: 'paper',
+    line: { color: NOTE_ONSET, width: 1, dash: 'dot' },
+    layer: 'below',
+  }));
+
+  notesToggle.textContent = `Notes (${notes.length})`;
+}
+
+// ── Plotly helpers ────────────────────────────────────────────────────────────
+const BG         = '#13131a';
+const GRID       = '#1e1e2a';
+const TICK       = '#555';
+const WAVE_COLOR = '#4a6fa5';
+const F0_COLOR   = '#c8b8ff';
+
+const sharedLayout = (extra) => ({
+  paper_bgcolor: BG,
+  plot_bgcolor:  BG,
+  margin: { l: 56, r: 20, t: 20, b: 36 },
+  font:  { color: TICK, size: 11 },
+  xaxis: {
+    gridcolor: GRID, zerolinecolor: GRID,
+    tickcolor: TICK, linecolor: GRID,
+    showspikes: true, spikecolor: '#7c6aff', spikethickness: 1, spikedash: 'solid',
+    ...extra.xaxis,
+  },
+  yaxis: {
+    gridcolor: GRID, zerolinecolor: GRID,
+    tickcolor: TICK, linecolor: GRID,
+    ...extra.yaxis,
+  },
+  hovermode: 'x unified',
+  dragmode: 'pan',
+  ...extra.rest,
+});
+
+const plotConfig = {
+  displayModeBar: true,
+  modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d'],
+  scrollZoom: true,
+  responsive: true,
+};
+
+function renderPlots(data) {
+  const waveTrace = {
+    x: data.waveform.times, y: data.waveform.amplitudes,
+    type: 'scattergl', mode: 'lines',
+    line: { color: WAVE_COLOR, width: 1 },
+    name: 'Amplitude',
+    hovertemplate: '%{x:.3f}s<extra></extra>',
+  };
+
+  const f0Midi = data.f0.hz.map(hzToMidi);
+  const f0Labels = f0Midi.map(m => m !== null ? midiToName(m) : null);
+  const f0Trace = {
+    x: data.f0.times, y: f0Midi,
+    text: f0Labels,
+    type: 'scattergl', mode: 'lines',
+    line: { color: F0_COLOR, width: 1.5 },
+    connectgaps: false,
+    name: 'Pitch',
+    hovertemplate: '%{x:.3f}s — %{text}<extra></extra>',
+  };
+
+  // Auto y-range with padding
+  const voiced = f0Midi.filter(Boolean);
+  const yMin = voiced.length ? Math.min(...voiced) - 3 : 48;
+  const yMax = voiced.length ? Math.max(...voiced) + 3 : 84;
+
+  const waveLayout = sharedLayout({
+    xaxis: { title: { text: '' }, range: [0, data.duration] },
+    yaxis: { title: { text: 'Amp', standoff: 6 }, fixedrange: true, zeroline: true },
+    rest:  { height: 180, showlegend: false, shapes: showNotes ? noteShapesWave : [] },
+  });
+
+  const f0Layout = sharedLayout({
+    xaxis: { title: { text: 'Time (s)' }, range: [0, data.duration] },
+    yaxis: {
+      title: { text: 'Pitch', standoff: 6 },
+      tickvals: pitchTickVals, ticktext: pitchTickText,
+      range: [yMin, yMax],
+      fixedrange: true,
+    },
+    rest:  { height: 420, showlegend: false, shapes: showNotes ? noteShapesF0 : [] },
+  });
+
+  Plotly.newPlot('waveformPlot', [waveTrace], waveLayout, plotConfig);
+  Plotly.newPlot('f0Plot',       [f0Trace],   f0Layout,   plotConfig).then(() => {
+    Plotly.Plots.resize('waveformPlot');
+    Plotly.Plots.resize('f0Plot');
+  });
+
+  // Sync x-axes on zoom/pan — guard prevents infinite bounce
+  const syncZoom = (src, dst) => {
+    document.getElementById(src).on('plotly_relayout', ev => {
+      if (syncing) return;
+      syncing = true;
+      if (ev['xaxis.range[0]'] !== undefined) {
+        Plotly.relayout(dst, { 'xaxis.range': [ev['xaxis.range[0]'], ev['xaxis.range[1]']] })
+          .finally(() => { syncing = false; });
+      } else if (ev['xaxis.autorange']) {
+        Plotly.relayout(dst, { 'xaxis.autorange': true })
+          .finally(() => { syncing = false; });
+      } else {
+        syncing = false;
+      }
+    });
+  };
+  syncZoom('waveformPlot', 'f0Plot');
+  syncZoom('f0Plot', 'waveformPlot');
+
+  // Horizontal scroll → pan both plots together
+  ['waveformPlot', 'f0Plot'].forEach(id => {
+    document.getElementById(id).addEventListener('wheel', e => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return; // leave vertical to Plotly zoom
+      e.preventDefault();
+      const xaxis = document.getElementById(id)._fullLayout?.xaxis;
+      if (!xaxis) return;
+      const span   = xaxis.range[1] - xaxis.range[0];
+      const shift  = (e.deltaX / (xaxis._length || 800)) * span * 2;
+      let r0 = xaxis.range[0] + shift;
+      let r1 = xaxis.range[1] + shift;
+      if (r0 < 0)               { r1 -= r0; r0 = 0; }
+      if (r1 > data.duration)   { r0 -= r1 - data.duration; r1 = data.duration; }
+      r0 = Math.max(0, r0);
+      if (syncing) return;
+      syncing = true;
+      Promise.all([
+        Plotly.relayout('waveformPlot', { 'xaxis.range': [r0, r1] }),
+        Plotly.relayout('f0Plot',       { 'xaxis.range': [r0, r1] }),
+      ]).finally(() => { syncing = false; });
+    }, { passive: false });
+  });
+
+  plots.classList.add('visible');
+}
+
+// ── Cursor + notes shape management ──────────────────────────────────────────
+function makeCursorShape(t) {
+  return {
+    type: 'line', x0: t, x1: t, y0: 0, y1: 1,
+    yref: 'paper', xref: 'x',
+    line: { color: '#ff6e6e', width: 1.5 },
+  };
+}
+
+function applyShapes(t) {
+  const cursor = makeCursorShape(t);
+  Plotly.relayout('waveformPlot', { shapes: showNotes ? [cursor, ...noteShapesWave] : [cursor] });
+  Plotly.relayout('f0Plot',       { shapes: showNotes ? [cursor, ...noteShapesF0]   : [cursor] });
+}
+
+function updateCursor(t) {
+  cursorTime = t;
+  applyShapes(t);
+}
+
+// ── Notes toggle ─────────────────────────────────────────────────────────────
+notesToggle.addEventListener('click', () => {
+  showNotes = !showNotes;
+  notesToggle.classList.toggle('off', !showNotes);
+  applyShapes(cursorTime);
+});
+
+// ── Export WAV ───────────────────────────────────────────────────────────────
+exportBtn.addEventListener('click', async () => {
+  if (!sessionId || exportBtn.disabled) return;
+  exportBtn.disabled = true;
+  exportBtn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, filename: 'pitch_edit.wav' }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'pitch_edit.wav';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Export failed:', err);
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.textContent = 'Export WAV';
+  }
+});
+
+// ── Playback ─────────────────────────────────────────────────────────────────
+playBtn.addEventListener('click', togglePlay);
+volumeSlider.addEventListener('input', () => { if (gainNode) gainNode.gain.value = +volumeSlider.value; });
+
+function togglePlay() {
+  if (!audioBuffer) return;
+  isPlaying ? pause() : play();
+}
+
+function play() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  stopAudio(false);
+
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = +volumeSlider.value;
+  gainNode.connect(audioCtx.destination);
+
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.connect(gainNode);
+  sourceNode.start(0, pauseOffset);
+  sourceNode.onended = () => {
+    if (isPlaying) { isPlaying = false; pauseOffset = 0; updatePlayUI(); cancelAnimationFrame(animFrame); updateCursor(0); updateTimeDisplay(0); }
+  };
+
+  startTime = audioCtx.currentTime - pauseOffset;
+  isPlaying = true;
+  updatePlayUI();
+  tick();
+}
+
+function pause() {
+  pauseOffset = audioCtx.currentTime - startTime;
+  stopAudio(false);
+  isPlaying = false;
+  updatePlayUI();
+  cancelAnimationFrame(animFrame);
+}
+
+function stopAudio(reset = true) {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e) {} sourceNode = null; }
+  if (reset) { pauseOffset = 0; isPlaying = false; updatePlayUI(); cancelAnimationFrame(animFrame); }
+}
+
+function updatePlayUI() {
+  playIcon.style.display  = isPlaying ? 'none'  : 'block';
+  pauseIcon.style.display = isPlaying ? 'block' : 'none';
+}
+
+function tick() {
+  if (!isPlaying) return;
+  const t = audioCtx.currentTime - startTime;
+  updateCursor(t);
+  updateTimeDisplay(t);
+  animFrame = requestAnimationFrame(tick);
+}
+
+function updateTimeDisplay(t) {
+  const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  timeDisplay.textContent = `${fmt(t)} / ${fmt(duration)}`;
+}
+
+// ── Note drag ─────────────────────────────────────────────────────────────────
+function setupNoteDrag() {
+  const el = document.getElementById('f0Plot');
+
+  // Transparent overlay sits over the plot; pointer-events toggled on hover
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:absolute;inset:0;z-index:10;pointer-events:none;';
+  el.style.position = 'relative';
+  el.appendChild(overlay);
+
+  function plotCoords(e) {
+    const layout = el._fullLayout;
+    if (!layout) return null;
+    const rect = el.getBoundingClientRect();
+    const px   = e.clientX - rect.left  - layout.margin.l;
+    const py   = e.clientY - rect.top   - layout.margin.t;
+    const xa   = layout.xaxis, ya = layout.yaxis;
+    return {
+      x: xa.range[0] + (px / xa._length) * (xa.range[1] - xa.range[0]),
+      y: ya.range[0] + (1 - py / ya._length) * (ya.range[1] - ya.range[0]),
+    };
+  }
+
+  function hitNote(cx, cy) {
+    if (!analysisData?.notes) return -1;
+    return analysisData.notes.findIndex(n => {
+      const m = hzToMidi(n.hz);
+      return cx >= n.start && cx <= n.end && cy >= m - 0.5 && cy <= m + 0.5;
+    });
+  }
+
+  // Cursor + overlay activation on hover
+  el.addEventListener('mousemove', e => {
+    if (dragIdx !== -1) return;
+    const d = plotCoords(e);
+    const hit = d ? hitNote(d.x, d.y) : -1;
+    overlay.style.pointerEvents = hit !== -1 ? 'auto' : 'none';
+    overlay.style.cursor        = hit !== -1 ? 'ns-resize' : '';
+  });
+
+  overlay.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const d = plotCoords(e);
+    if (!d) return;
+    const idx = hitNote(d.x, d.y);
+    if (idx === -1) return;
+    e.preventDefault();
+
+    dragIdx       = idx;
+    dragStartMidi = hzToMidi(analysisData.notes[idx].hz);
+    dragSnapMidi  = Math.round(dragStartMidi);
+
+    overlay.style.cursor = 'ns-resize';
+
+    function onMove(e) {
+      const d = plotCoords(e);
+      if (!d) return;
+      const snapped = Math.round(d.y);
+      if (snapped === dragSnapMidi) return;
+      dragSnapMidi = snapped;
+
+      // Rebuild shapes with ghost at new position
+      noteShapesF0 = analysisData.notes.map((n, i) => {
+        const midi = i === dragIdx ? snapped : hzToMidi(n.hz);
+        const isGhost = i === dragIdx;
+        return {
+          type: 'rect',
+          x0: n.start, x1: n.end,
+          y0: midi - 0.5, y1: midi + 0.5,
+          xref: 'x', yref: 'y',
+          fillcolor: isGhost ? 'rgba(255,220,80,0.40)' : NOTE_FILL,
+          line: { color: isGhost ? 'rgba(255,220,80,1.0)' : NOTE_BORDER,
+                  width: isGhost ? 2 : 1.5 },
+          layer: 'below',
+        };
+      });
+      applyShapes(cursorTime);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      overlay.style.pointerEvents = 'none';
+
+      const delta = dragSnapMidi - Math.round(dragStartMidi);
+      const idx   = dragIdx;
+      dragIdx = -1;
+
+      if (delta !== 0) {
+        commitNoteEdit(idx, delta);
+      } else {
+        buildNoteShapes(analysisData.notes);
+        applyShapes(cursorTime);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+}
+
+async function commitNoteEdit(noteIdx, semitone_delta) {
+  const note = analysisData.notes[noteIdx];
+  analyzeBtn.disabled = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+
+  try {
+    const res = await fetch('/edit_note', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        session_id:     sessionId,
+        note_start:     note.start,
+        note_end:       note.end,
+        semitone_delta,
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail);
+    const data = await res.json();
+
+    await applyEditResponse(data);
+
+  } catch (err) {
+    errorMsg.textContent = 'Edit failed: ' + err.message;
+    errorMsg.classList.add('visible');
+    buildNoteShapes(analysisData.notes);
+    applyShapes(cursorTime);
+  } finally {
+    progressBar.classList.remove('visible');
+    analyzeBtn.disabled = false;
+  }
+}
+
+// ── Apply any edit/undo response to the UI ───────────────────────────────────
+async function applyEditResponse(data) {
+  // Update notes array
+  if (data.notes) analysisData.notes = data.notes;
+  analysisData.f0.hz = data.f0.hz;
+
+  // Redraw f0 trace
+  const f0Midi   = data.f0.hz.map(hzToMidi);
+  const f0Labels = f0Midi.map(m => m !== null ? midiToName(m) : null);
+  Plotly.update('f0Plot', { y: [f0Midi], text: [f0Labels] });
+
+  // Redraw waveform trace
+  Plotly.update('waveformPlot', {
+    x: [data.waveform.times],
+    y: [data.waveform.amplitudes],
+  });
+
+  // Rebuild note shapes and cursor
+  buildNoteShapes(analysisData.notes);
+  applyShapes(cursorTime);
+
+  // Replace audio buffer
+  const bytes = Uint8Array.from(atob(data.audio_b64), c => c.charCodeAt(0));
+  if (!audioCtx) audioCtx = new AudioContext();
+  audioBuffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
+  duration    = audioBuffer.duration;
+}
+
+// ── Cmd+Z / Cmd+Shift+Z undo & redo ─────────────────────────────────────────
+let historyPending = false;
+
+async function callHistory(endpoint, label) {
+  if (historyPending || !sessionId) return;
+  historyPending = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+  try {
+    const res = await fetch(endpoint, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ session_id: sessionId }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      if (res.status !== 400) throw new Error(err.detail); // 400 = stack empty, silent
+    } else {
+      await applyEditResponse(await res.json());
+    }
+  } catch (err) {
+    errorMsg.textContent = `${label} failed: ` + err.message;
+    errorMsg.classList.add('visible');
+  } finally {
+    progressBar.classList.remove('visible');
+    historyPending = false;
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (!e.metaKey || e.key !== 'z') return;
+  e.preventDefault();
+  if (e.shiftKey) callHistory('/redo', 'Redo');
+  else            callHistory('/undo', 'Undo');
+});
+
+// Space to play/pause when hovering over either plot
+let plotHovered = false;
+['waveformPlot', 'f0Plot'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('mouseenter', () => { plotHovered = true; });
+  el.addEventListener('mouseleave', () => { plotHovered = false; });
+});
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && plotHovered) { e.preventDefault(); togglePlay(); }
+});
+
+// Click to seek
+document.getElementById('waveformPlot').addEventListener('click', handleSeekClick);
+document.getElementById('f0Plot').addEventListener('click', handleSeekClick);
+
+function handleSeekClick(e) {
+  const plotEl = e.currentTarget;
+  const layout = plotEl._fullLayout;
+  if (!layout) return;
+  const rect = plotEl.getBoundingClientRect();
+  const t = layout.xaxis.p2d(e.clientX - rect.left - layout.margin.l);
+  if (t < 0 || t > duration) return;
+  pauseOffset = t;
+  updateCursor(t);
+  updateTimeDisplay(t);
+  if (isPlaying) play();
+}
+</script>
+</body>
+</html>

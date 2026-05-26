@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(conda create *)",
+      "Bash(conda tos *)",
+      "Bash(conda run *)",
+      "Bash(curl -s http://localhost:8765/)",
+      "Bash(curl -v http://localhost:8765/)",
+      "Bash(curl -s -X POST http://localhost:8765/analyze -F \"file=@enyan_demo_long.mp3\")",
+      "Bash(python3 -c ' *)",
+      "Bash(pkill -f \"uvicorn main:app\")",
+      "Bash(chmod +x *)",
+      "Bash(grep -v \"^$\\\\|UserWarning\\\\|warnings\\\\|TF\\\\|tensorflow\\\\|I tensorflow\\\\|W tensorflow\\\\|coreml\\\\|WARNING\\\\|INFO\\\\|NOTICE\\\\|Deprecat\")",
+      "Bash(ffmpeg *)",
+      "Bash(python3 *)"
+    ]
+  }
+}
