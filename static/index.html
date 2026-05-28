@@ -250,9 +250,106 @@
       font-size: 0.85rem;
     }
     .error-msg.visible { display: block; }
+
+    /* Tips bar */
+    .tips-bar {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: #13131a;
+      border: 1px solid #2e2e42;
+      border-left: 3px solid #7c6aff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.8rem;
+    }
+    .tips-bar.visible { display: flex; }
+
+    .tips-bar .tips-note {
+      color: #aaa;
+      line-height: 1.4;
+    }
+    .tips-bar .tips-note strong { color: #c8b8ff; font-weight: 600; }
+
+    .tips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #1e1e2e;
+      border: 1px solid #2e2e44;
+      border-radius: 20px;
+      padding: 4px 11px 4px 8px;
+      color: #ccc;
+      white-space: nowrap;
+    }
+    .tip .tip-key {
+      background: #2e2e44;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #ffaa44;
+      letter-spacing: 0.02em;
+    }
+    .tip .tip-key.purple { color: #c8b8ff; background: #2a2240; }
+
+    /* Note context menu */
+    .note-ctx-menu {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: #1a1a26;
+      border: 1px solid #2e2e42;
+      border-radius: 8px;
+      padding: 4px 0;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      font-size: 0.85rem;
+    }
+    .note-ctx-menu.visible { display: block; }
+    .note-ctx-menu button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 14px;
+      background: none;
+      border: none;
+      color: #e2e2e8;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s;
+    }
+    .note-ctx-menu button:hover { background: #2a2a3a; }
+    .note-ctx-menu button.danger { color: #ff7070; }
+    .note-ctx-menu button.danger:hover { background: #2a1515; }
+    .note-ctx-menu .ctx-sep {
+      height: 1px;
+      background: #2e2e42;
+      margin: 4px 0;
+    }
   </style>
 </head>
 <body>
+
+<!-- Note right-click context menu -->
+<div class="note-ctx-menu" id="noteCtxMenu">
+  <button id="ctxMerge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/><path d="M16 18h3a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><line x1="12" y1="9" x2="12" y2="15"/></svg>
+    Merge with previous
+  </button>
+  <div class="ctx-sep"></div>
+  <button id="ctxDelete" class="danger">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    Delete note
+  </button>
+</div>
 
 <header>
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8b8ff" stroke-width="2" stroke-linecap="round">
@@ -281,6 +378,31 @@
 
   <div class="progress-bar" id="progressBar"><div class="fill"></div></div>
   <div class="error-msg" id="errorMsg"></div>
+
+  <div class="tips-bar" id="tipsBar">
+    <div class="tips-note">
+      <strong>Note detection is automatic and may be imperfect.</strong>
+      Use the controls below to correct onset/offset boundaries and pitches.
+    </div>
+    <div class="tips-row">
+      <div class="tip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffaa44" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span class="tip-key">Click</span> note to select
+      </div>
+      <div class="tip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffaa44" stroke-width="2.2" stroke-linecap="round"><path d="M5 9l-3 3 3 3M19 9l3 3-3 3M2 12h20"/></svg>
+        Drag <span class="tip-key">edge handle</span> to adjust onset / offset
+      </div>
+      <div class="tip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c8b8ff" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+        Drag note <span class="tip-key purple">up / down</span> to shift pitch
+      </div>
+      <div class="tip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2.2" stroke-linecap="round"><circle cx="9" cy="12" r="1.5"/><path d="M9 5v3M9 16v3M15 9l-3 3M15 15l-3-3"/></svg>
+        <span class="tip-key" style="color:#aaa;background:#252535">Right-click</span> note to delete or merge
+      </div>
+    </div>
+  </div>
 
   <div class="plots" id="plots">
     <div class="plot-panel">
@@ -330,9 +452,10 @@ let showNotes = true;
 let syncing = false;
 let sessionId = null;
 // drag state
-let dragIdx       = -1;
-let dragStartMidi = 0;
-let dragSnapMidi  = 0;
+let dragIdx        = -1;
+let dragStartMidi  = 0;
+let dragSnapMidi   = 0;
+let selectedNoteIdx = -1;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const fileInput     = document.getElementById('fileInput');
@@ -344,6 +467,7 @@ const analyzeBtn    = document.getElementById('analyzeBtn');
 const progressBar   = document.getElementById('progressBar');
 const errorMsg      = document.getElementById('errorMsg');
 const plots         = document.getElementById('plots');
+const tipsBar       = document.getElementById('tipsBar');
 const controls      = document.getElementById('controls');
 const playBtn       = document.getElementById('playBtn');
 const playIcon      = document.getElementById('playIcon');
@@ -370,6 +494,7 @@ function handleFile(f) {
   fileInfo.classList.add('visible');
   errorMsg.classList.remove('visible');
   plots.classList.remove('visible');
+  tipsBar.classList.remove('visible');
   controls.classList.remove('visible');
   stopAudio();
   analyzeBtn.disabled = false;
@@ -430,21 +555,38 @@ for (let m = 24; m <= 108; m++) {
 }
 
 // ── Note shapes ───────────────────────────────────────────────────────────────
-const NOTE_FILL   = 'rgba(255,170,68,0.28)';
-const NOTE_BORDER = 'rgba(255,170,68,0.9)';
-const NOTE_ONSET  = 'rgba(255,170,68,0.55)';
+const NOTE_FILL       = 'rgba(255,170,68,0.28)';
+const NOTE_BORDER     = 'rgba(255,170,68,0.9)';
+const NOTE_ONSET      = 'rgba(255,170,68,0.55)';
+const NOTE_SEL_FILL   = 'rgba(255,190,68,0.45)';
+const NOTE_SEL_BORDER = 'rgba(255,210,80,1.0)';
+const NOTE_HANDLE     = 'rgba(255,230,110,0.95)';
 
 function buildNoteShapes(notes) {
-  noteShapesF0 = notes.map(n => ({
-    type: 'rect',
-    x0: n.start, x1: n.end,
-    y0: hzToMidi(n.hz) - 0.5,   // ±half semitone in MIDI space
-    y1: hzToMidi(n.hz) + 0.5,
-    xref: 'x', yref: 'y',
-    fillcolor: NOTE_FILL,
-    line: { color: NOTE_BORDER, width: 1.5 },
-    layer: 'below',
-  }));
+  noteShapesF0 = notes.map((n, i) => {
+    const sel = i === selectedNoteIdx;
+    return {
+      type: 'rect',
+      x0: n.start, x1: n.end,
+      y0: hzToMidi(n.hz) - 0.5,
+      y1: hzToMidi(n.hz) + 0.5,
+      xref: 'x', yref: 'y',
+      fillcolor: sel ? NOTE_SEL_FILL : NOTE_FILL,
+      line: { color: sel ? NOTE_SEL_BORDER : NOTE_BORDER, width: sel ? 2.5 : 1.5 },
+      layer: 'below',
+    };
+  });
+  // Edge handles for selected note
+  if (selectedNoteIdx >= 0 && selectedNoteIdx < notes.length) {
+    const sn = notes[selectedNoteIdx];
+    const m  = hzToMidi(sn.hz);
+    noteShapesF0.push(
+      { type: 'line', x0: sn.start, x1: sn.start, y0: m - 0.5, y1: m + 0.5,
+        xref: 'x', yref: 'y', line: { color: NOTE_HANDLE, width: 3 }, layer: 'above' },
+      { type: 'line', x0: sn.end,   x1: sn.end,   y0: m - 0.5, y1: m + 0.5,
+        xref: 'x', yref: 'y', line: { color: NOTE_HANDLE, width: 3 }, layer: 'above' },
+    );
+  }
 
   noteShapesWave = notes.map(n => ({
     type: 'line',
@@ -583,6 +725,7 @@ function renderPlots(data) {
     }, { passive: false });
   });
 
+  tipsBar.classList.add('visible');
   plots.classList.add('visible');
 }
 
@@ -734,22 +877,113 @@ function setupNoteDrag() {
     });
   }
 
+  let edgeDragActive = false;
+
+  function edgeThresh() {
+    const layout = el._fullLayout;
+    if (!layout) return 0.05;
+    const xa = layout.xaxis;
+    return 8 * (xa.range[1] - xa.range[0]) / xa._length;
+  }
+
+  function hitEdge(cx, cy) {
+    if (selectedNoteIdx === -1 || !analysisData?.notes) return null;
+    const sn = analysisData.notes[selectedNoteIdx];
+    const m  = hzToMidi(sn.hz);
+    if (cy < m - 0.8 || cy > m + 0.8) return null;
+    const t = edgeThresh();
+    if (Math.abs(cx - sn.start) < t) return 'left';
+    if (Math.abs(cx - sn.end)   < t) return 'right';
+    return null;
+  }
+
   // Cursor + overlay activation on hover
   el.addEventListener('mousemove', e => {
-    if (dragIdx !== -1) return;
+    if (dragIdx !== -1 || edgeDragActive) return;
     const d = plotCoords(e);
-    const hit = d ? hitNote(d.x, d.y) : -1;
+    if (!d) { overlay.style.pointerEvents = 'none'; return; }
+    const edge = hitEdge(d.x, d.y);
+    const hit  = edge !== null ? selectedNoteIdx : hitNote(d.x, d.y);
     overlay.style.pointerEvents = hit !== -1 ? 'auto' : 'none';
-    overlay.style.cursor        = hit !== -1 ? 'ns-resize' : '';
+    overlay.style.cursor = edge ? 'ew-resize' : (hit !== -1 ? 'ns-resize' : '');
+  });
+
+  // Deselect when clicking on the plot background (overlay is pointer-events:none there)
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0 || selectedNoteIdx === -1) return;
+    selectedNoteIdx = -1;
+    buildNoteShapes(analysisData.notes);
+    applyShapes(cursorTime);
   });
 
   overlay.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
     const d = plotCoords(e);
     if (!d) return;
+    e.preventDefault();
+    e.stopPropagation(); // prevent el's mousedown from deselecting
+
+    // ── Edge drag ──────────────────────────────────────────────────────────────
+    const edge = hitEdge(d.x, d.y);
+    if (edge) {
+      const note      = analysisData.notes[selectedNoteIdx];
+      const origStart = note.start;
+      const origEnd   = note.end;
+      const selIdx    = selectedNoteIdx;
+      let   newStart  = origStart;
+      let   newEnd    = origEnd;
+      edgeDragActive  = true;
+
+      function onEdgeMove(e) {
+        const d = plotCoords(e);
+        if (!d) return;
+        if (edge === 'left') newStart = Math.min(d.x, newEnd   - 0.05);
+        else                 newEnd   = Math.max(d.x, newStart + 0.05);
+
+        const m = hzToMidi(note.hz);
+        noteShapesF0 = analysisData.notes.map((n, i) => {
+          const sel = i === selIdx;
+          return {
+            type: 'rect',
+            x0: sel && edge === 'left'  ? newStart : n.start,
+            x1: sel && edge === 'right' ? newEnd   : n.end,
+            y0: hzToMidi(n.hz) - 0.5, y1: hzToMidi(n.hz) + 0.5,
+            xref: 'x', yref: 'y',
+            fillcolor: sel ? NOTE_SEL_FILL   : NOTE_FILL,
+            line: { color: sel ? NOTE_SEL_BORDER : NOTE_BORDER, width: sel ? 2.5 : 1.5 },
+            layer: 'below',
+          };
+        });
+        noteShapesF0.push(
+          { type: 'line', x0: newStart, x1: newStart, y0: m - 0.5, y1: m + 0.5,
+            xref: 'x', yref: 'y', line: { color: NOTE_HANDLE, width: 3 }, layer: 'above' },
+          { type: 'line', x0: newEnd,   x1: newEnd,   y0: m - 0.5, y1: m + 0.5,
+            xref: 'x', yref: 'y', line: { color: NOTE_HANDLE, width: 3 }, layer: 'above' },
+        );
+        applyShapes(cursorTime);
+      }
+
+      function onEdgeUp() {
+        document.removeEventListener('mousemove', onEdgeMove);
+        document.removeEventListener('mouseup',   onEdgeUp);
+        edgeDragActive = false;
+        overlay.style.pointerEvents = 'none';
+        if (Math.abs(newStart - origStart) > 0.001 || Math.abs(newEnd - origEnd) > 0.001) {
+          commitResizeNote(selIdx, origStart, origEnd, newStart, newEnd);
+        } else {
+          buildNoteShapes(analysisData.notes);
+          applyShapes(cursorTime);
+        }
+      }
+
+      document.addEventListener('mousemove', onEdgeMove);
+      document.addEventListener('mouseup',   onEdgeUp);
+      return;
+    }
+
+    // ── Pitch drag / click-to-select ───────────────────────────────────────────
     const idx = hitNote(d.x, d.y);
     if (idx === -1) return;
-    e.preventDefault();
 
     dragIdx       = idx;
     dragStartMidi = hzToMidi(analysisData.notes[idx].hz);
@@ -764,9 +998,8 @@ function setupNoteDrag() {
       if (snapped === dragSnapMidi) return;
       dragSnapMidi = snapped;
 
-      // Rebuild shapes with ghost at new position
       noteShapesF0 = analysisData.notes.map((n, i) => {
-        const midi = i === dragIdx ? snapped : hzToMidi(n.hz);
+        const midi    = i === dragIdx ? snapped : hzToMidi(n.hz);
         const isGhost = i === dragIdx;
         return {
           type: 'rect',
@@ -787,13 +1020,15 @@ function setupNoteDrag() {
       document.removeEventListener('mouseup',   onUp);
       overlay.style.pointerEvents = 'none';
 
-      const delta = dragSnapMidi - Math.round(dragStartMidi);
-      const idx   = dragIdx;
+      const delta       = dragSnapMidi - Math.round(dragStartMidi);
+      const capturedIdx = dragIdx;
       dragIdx = -1;
 
       if (delta !== 0) {
-        commitNoteEdit(idx, delta);
+        commitNoteEdit(capturedIdx, delta);
       } else {
+        // Pure click → select this note
+        selectedNoteIdx = idx;
         buildNoteShapes(analysisData.notes);
         applyShapes(cursorTime);
       }
@@ -801,6 +1036,66 @@ function setupNoteDrag() {
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup',   onUp);
+  });
+
+  // ── Right-click context menu ─────────────────────────────────────────────────
+  const ctxMenu   = document.getElementById('noteCtxMenu');
+  const ctxDelete = document.getElementById('ctxDelete');
+  const ctxMerge  = document.getElementById('ctxMerge');
+  let ctxNoteIdx  = -1;
+
+  function hideCtxMenu() { ctxMenu.classList.remove('visible'); ctxNoteIdx = -1; }
+
+  overlay.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const d = plotCoords(e);
+    if (!d) return;
+    const idx = hitNote(d.x, d.y);
+    if (idx === -1) return;
+
+    ctxNoteIdx = idx;
+
+    // Disable "merge with previous" when there is no previous note
+    const notesSorted = [...analysisData.notes].sort((a, b) => a.start - b.start);
+    const globalIdx   = notesSorted.findIndex(n =>
+      Math.abs(n.start - analysisData.notes[idx].start) < 0.001 &&
+      Math.abs(n.end   - analysisData.notes[idx].end)   < 0.001
+    );
+    ctxMerge.disabled = globalIdx <= 0;
+    ctxMerge.style.opacity = globalIdx <= 0 ? '0.35' : '';
+    ctxMerge.style.cursor  = globalIdx <= 0 ? 'default' : '';
+
+    ctxMenu.style.left = e.clientX + 'px';
+    ctxMenu.style.top  = e.clientY + 'px';
+    ctxMenu.classList.add('visible');
+  });
+
+  ctxDelete.addEventListener('click', () => {
+    if (ctxNoteIdx === -1) return;
+    const idx = ctxNoteIdx;
+    hideCtxMenu();
+    commitDeleteNote(idx);
+  });
+
+  ctxMerge.addEventListener('click', () => {
+    if (ctxNoteIdx === -1 || ctxMerge.disabled) return;
+    const idx = ctxNoteIdx;
+    hideCtxMenu();
+    commitMergeNote(idx);
+  });
+
+  document.addEventListener('click',       hideCtxMenu);
+  document.addEventListener('contextmenu', e => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      hideCtxMenu();
+      if (selectedNoteIdx !== -1) {
+        selectedNoteIdx = -1;
+        buildNoteShapes(analysisData.notes);
+        applyShapes(cursorTime);
+      }
+    }
   });
 }
 
@@ -828,6 +1123,81 @@ async function commitNoteEdit(noteIdx, semitone_delta) {
 
   } catch (err) {
     errorMsg.textContent = 'Edit failed: ' + err.message;
+    errorMsg.classList.add('visible');
+    buildNoteShapes(analysisData.notes);
+    applyShapes(cursorTime);
+  } finally {
+    progressBar.classList.remove('visible');
+    analyzeBtn.disabled = false;
+  }
+}
+
+async function commitDeleteNote(noteIdx) {
+  const note = analysisData.notes[noteIdx];
+  selectedNoteIdx = -1;
+  analyzeBtn.disabled = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+  try {
+    const res = await fetch('/delete_note', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ session_id: sessionId, note_start: note.start, note_end: note.end }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail);
+    await applyEditResponse(await res.json());
+  } catch (err) {
+    errorMsg.textContent = 'Delete failed: ' + err.message;
+    errorMsg.classList.add('visible');
+  } finally {
+    progressBar.classList.remove('visible');
+    analyzeBtn.disabled = false;
+  }
+}
+
+async function commitMergeNote(noteIdx) {
+  const note = analysisData.notes[noteIdx];
+  selectedNoteIdx = -1;
+  analyzeBtn.disabled = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+  try {
+    const res = await fetch('/merge_note', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ session_id: sessionId, note_start: note.start, note_end: note.end }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail);
+    await applyEditResponse(await res.json());
+  } catch (err) {
+    errorMsg.textContent = 'Merge failed: ' + err.message;
+    errorMsg.classList.add('visible');
+  } finally {
+    progressBar.classList.remove('visible');
+    analyzeBtn.disabled = false;
+  }
+}
+
+async function commitResizeNote(noteIdx, origStart, origEnd, newStart, newEnd) {
+  analyzeBtn.disabled = true;
+  progressBar.classList.add('visible');
+  errorMsg.classList.remove('visible');
+  try {
+    const res = await fetch('/resize_note', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        session_id: sessionId,
+        note_start: origStart,
+        note_end:   origEnd,
+        new_start:  newStart,
+        new_end:    newEnd,
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail);
+    await applyEditResponse(await res.json());
+  } catch (err) {
+    errorMsg.textContent = 'Resize failed: ' + err.message;
     errorMsg.classList.add('visible');
     buildNoteShapes(analysisData.notes);
     applyShapes(cursorTime);

@@ -12,7 +12,8 @@
       "Bash(chmod +x *)",
       "Bash(grep -v \"^$\\\\|UserWarning\\\\|warnings\\\\|TF\\\\|tensorflow\\\\|I tensorflow\\\\|W tensorflow\\\\|coreml\\\\|WARNING\\\\|INFO\\\\|NOTICE\\\\|Deprecat\")",
       "Bash(ffmpeg *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(git rm *)"
     ]
   }
 }

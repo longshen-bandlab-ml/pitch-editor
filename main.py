@@ -545,6 +545,103 @@ async def edit_note(req: EditNoteRequest):
     return JSONResponse(_audio_response(modified, sr, f0_times, f0_hz, notes))
 
 
+class DeleteNoteRequest(BaseModel):
+    session_id: str
+    note_start:  float
+    note_end:    float
+
+
+@app.post("/delete_note")
+async def delete_note(req: DeleteNoteRequest):
+    session = _sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session expired — please re-analyse.")
+
+    session["undo_stack"].append(_session_snapshot(session))
+    session["redo_stack"].clear()
+
+    notes = [n for n in session["notes"]
+             if not (abs(n["start"] - req.note_start) < 0.001
+                     and abs(n["end"] - req.note_end) < 0.001)]
+    session["notes"] = notes
+
+    return JSONResponse(_audio_response(
+        session["audio"], session["sr"], session["f0_times"], session["f0_hz"], notes
+    ))
+
+
+class MergeNoteRequest(BaseModel):
+    session_id: str
+    note_start:  float
+    note_end:    float
+
+
+@app.post("/merge_note")
+async def merge_note(req: MergeNoteRequest):
+    session = _sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session expired — please re-analyse.")
+
+    notes_sorted = sorted(session["notes"], key=lambda n: n["start"])
+    curr_idx = next(
+        (i for i, n in enumerate(notes_sorted)
+         if abs(n["start"] - req.note_start) < 0.001
+         and abs(n["end"] - req.note_end) < 0.001),
+        -1,
+    )
+    if curr_idx <= 0:
+        raise HTTPException(status_code=400, detail="No previous note to merge with.")
+
+    session["undo_stack"].append(_session_snapshot(session))
+    session["redo_stack"].clear()
+
+    curr_note = notes_sorted[curr_idx]
+
+    new_notes = []
+    for i, n in enumerate(notes_sorted):
+        if i == curr_idx - 1:
+            new_notes.append({**n, "end": curr_note["end"]})
+        elif i == curr_idx:
+            pass  # absorbed into previous note
+        else:
+            new_notes.append(dict(n))
+    session["notes"] = new_notes
+
+    return JSONResponse(_audio_response(
+        session["audio"], session["sr"], session["f0_times"], session["f0_hz"], new_notes
+    ))
+
+
+class ResizeNoteRequest(BaseModel):
+    session_id: str
+    note_start: float
+    note_end:   float
+    new_start:  float
+    new_end:    float
+
+
+@app.post("/resize_note")
+async def resize_note(req: ResizeNoteRequest):
+    session = _sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session expired — please re-analyse.")
+
+    session["undo_stack"].append(_session_snapshot(session))
+    session["redo_stack"].clear()
+
+    notes = [dict(n) for n in session["notes"]]
+    for n in notes:
+        if abs(n["start"] - req.note_start) < 0.001 and abs(n["end"] - req.note_end) < 0.001:
+            n["start"] = round(req.new_start, 4)
+            n["end"]   = round(req.new_end, 4)
+            break
+    session["notes"] = notes
+
+    return JSONResponse(_audio_response(
+        session["audio"], session["sr"], session["f0_times"], session["f0_hz"], notes
+    ))
+
+
 class UndoRequest(BaseModel):
     session_id: str
 
