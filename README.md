@@ -1,3 +1,7 @@
+Github: https://github.com/longshen-bandlab-ml/bandlab-ml-pitch-editor
+
+This project may serve as a baseline for singing voice pitch editing. Method: crepe for pitch tracking, basic pitch for note transcription, world for synthesize.
+
 # Pitch Editor
 
 A browser-based tool for visualising and editing the pitch contour of audio recordings. Upload a file, inspect the F0 curve alongside the waveform, detect note boundaries automatically, and drag notes up or down to correct pitch — all with real-time audio playback.
